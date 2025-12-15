@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { getUsers, deleteUser } from '../../services/api';
+import { getUsers, deleteUser, updateUser } from '../../services/api';
 
 function UserList() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
+    const [updating, setUpdating] = useState(false);
 
     const fetchUsers = async () => {
         try {
@@ -39,6 +40,41 @@ function UserList() {
         }
     };
 
+    const handleEdit = async (user) => {
+        const newName = window.prompt('Novo nome do cliente:', user.name);
+        if (!newName) return;
+
+        const newEmail = window.prompt('Novo email do cliente:', user.email);
+        if (!newEmail) return;
+
+        const newPhone = window.prompt('Novo telefone do cliente:', user.phone);
+        if (!newPhone) return;
+
+        setUpdating(true);
+        try {
+            const result = await updateUser(user._id, {
+                name: newName,
+                email: newEmail,
+                phone: newPhone
+            });
+
+            const updatedUser = result.user || result;
+
+            setUsers((prev) =>
+                prev.map((u) => (u._id === user._id ? updatedUser : u))
+            );
+
+            setMessage(`Cliente "${updatedUser.name}" atualizado com sucesso!`);
+            setError(null);
+        } catch (err) {
+            const errorMessage = err?.message || 'Falha ao atualizar o cliente.';
+            setError('Erro ao atualizar o cliente: ' + errorMessage);
+            setMessage(null);
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     if (loading) return <p className="alert-info">Carregando Clientes...</p>;
     if (error) return <p className="alert-error">{error}</p>;
 
@@ -62,7 +98,23 @@ function UserList() {
                         { }
                         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                             <button
+                                onClick={() => handleEdit(user)}
+                                disabled={updating}
+                                style={{
+                                    backgroundColor: '#0d6efd',
+                                    color: 'white',
+                                    padding: '10px',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    flexGrow: 1
+                                }}
+                            >
+                                {updating ? 'Salvando...' : 'Editar'}
+                            </button>
+                            <button
                                 onClick={() => handleDelete(user._id, user.name)}
+                                disabled={updating}
                                 style={{
                                     backgroundColor: '#dc3545',
                                     color: 'white',

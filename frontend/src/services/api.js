@@ -69,6 +69,16 @@ export const deleteUser = async (userId) => {
     }
 };
 
+export const updateUser = async (userId, userData) => {
+    try {
+        const response = await api.put(`/users/${userId}`, userData);
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao atualizar usuário:', error.response?.data || error.message);
+        throw error.response?.data || { message: 'Falha ao atualizar o usuário.' };
+    }
+};
+
 
 export const createReservation = async (reservationData) => {
     try {
@@ -98,6 +108,17 @@ export const deleteReservation = async (reservationId) => {
     } catch (error) {
         console.error('Erro ao deletar reserva:', error.response?.data || error.message);
         const backendMessage = error.response?.data?.message || 'Falha ao deletar a reserva.';
+        throw { message: backendMessage };
+    }
+};
+
+export const updateReservation = async (reservationId, reservationData) => {
+    try {
+        const response = await api.put(`/reservations/${reservationId}`, reservationData);
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao atualizar reserva:', error.response?.data || error.message);
+        const backendMessage = error.response?.data?.message || 'Falha ao atualizar a reserva.';
         throw { message: backendMessage };
     }
 };

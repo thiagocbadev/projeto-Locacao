@@ -84,6 +84,100 @@ class ReservationController {
         }
     }
 
+    async update(req, res) {
+        const { id } = req.params
+        const { spaceId, userId, start, end } = req.body
+
+        try {
+            const existing = await Reservation.findById(id)
+            if (!existing) {
+                return res.status(404).json({ error: 'Reserva não encontrada.' })
+            }
+
+            const newSpaceId = spaceId || existing.spaceId
+            const newUserId = userId || existing.userId
+
+            if (!start && !end && !spaceId && !userId) {
+                return res.status(400).json({
+                    error: 'Nenhum dado para atualização.',
+                    message: 'Envie pelo menos um campo para atualizar.'
+                })
+            }
+
+            let startTime = existing.start
+            let endTime = existing.end
+
+            if (start) {
+                startTime = new Date(start)
+            }
+            if (end) {
+                endTime = new Date(end)
+            }
+
+            if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+                return res.status(400).json({
+                    error: 'Formato de Data Inválido',
+                    message: 'As datas de início e fim devem estar em um formato válido (ex: ISO 8601).'
+                })
+            }
+
+            if (startTime >= endTime) {
+                return res.status(400).json({ error: 'O tempo de fim deve ser estritamente posterior ao tempo de início.' })
+            }
+
+            const space = await Space.findById(newSpaceId);
+            if (!space) {
+                return res.status(404).json({ error: 'Espaço não encontrado.' });
+            }
+
+            const pricePerHour = space.pricePerHour || 0;
+            const durationMs = endTime.getTime() - startTime.getTime();
+            const durationHours = durationMs / (1000 * 60 * 60);
+            const totalCost = durationHours * pricePerHour;
+
+            const conflict = await Reservation.findOne({
+                _id: { $ne: id },
+                spaceId: newSpaceId,
+                $or: [
+                    { start: { $lt: endTime }, end: { $gt: startTime } }
+                ]
+            })
+
+            if (conflict) {
+                return res.status(400).json({
+                    error: 'Conflito de horário: espaço já reservado neste período',
+                    message: 'Conflito de horário: o espaço já está reservado no período especificado.',
+                    conflictDetails: { start: conflict.start, end: conflict.end }
+                })
+            }
+
+            existing.spaceId = newSpaceId
+            existing.userId = newUserId
+            existing.start = startTime
+            existing.end = endTime
+            existing.totalCost = totalCost
+
+            const updated = await existing.save()
+
+            const populated = await updated
+                .populate('spaceId')
+                .populate('userId')
+
+            return res.json({
+                message: 'Reserva atualizada com sucesso.',
+                reservation: populated,
+                totalCost: totalCost
+            })
+
+        } catch (error) {
+            console.error('Erro ao atualizar reserva:', error)
+            return res.status(500).json({
+                error: 'Erro interno ao atualizar a reserva',
+                details: error.message
+            })
+        }
+    }
+
     async list(req, res) {
         try {
             const filter = {}

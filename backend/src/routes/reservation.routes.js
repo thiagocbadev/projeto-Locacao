@@ -6,6 +6,7 @@ const routes = express.Router()
 routes.post('/reservations', ReservationController.create)
 routes.get('/reservations', ReservationController.list)
 routes.get('/reservations/:id', ReservationController.show)
+routes.put('/reservations/:id', ReservationController.update)
 routes.delete('/reservations/:id', ReservationController.remove)
 
 module.exports = routes
